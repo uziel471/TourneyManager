@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NavigationMenu } from "@/components/menu/navigation"
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -22,11 +23,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isAuthenticated = true
+  const userRole = "admin" as const
+  const userName = "Uziel Estrada"
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <NavigationMenu isAuthenticated={isAuthenticated} userRole={userRole} userName={userName} />
         {children}
       </body>
     </html>
