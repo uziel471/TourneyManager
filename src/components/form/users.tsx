@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { yupResolver } from "@hookform/resolvers/yup"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,15 +16,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Role } from "../menu/const"
+import { userSchema, type UserFormData } from "@/lib/validations/user"
 
 interface User {
   id: string
   name: string
   email: string
   phone?: string
-  role: Role
-  status: "active" | "inactive" | "suspended"
+  role: string
+  status: string
   team?: string
 }
 
@@ -32,31 +32,43 @@ interface UserFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   user?: User
-  onSave: (userData: Partial<User>) => void
+  onSave: (userData: UserFormData) => void
 }
 
 export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDialogProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "player",
-    team: "",
-    sendWelcomeEmail: true,
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+    setValue,
+  } = useForm<UserFormData>({
+    resolver: yupResolver(userSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      role: "player",
+      team: "",
+      sendWelcomeEmail: true,
+    },
   })
+
+  const role = watch("role")
 
   useEffect(() => {
     if (user) {
-      setFormData({
+      reset({
         name: user.name,
         email: user.email,
         phone: user.phone || "",
-        role: user.role,
+        role: user.role as UserFormData['role'],
         team: user.team || "",
         sendWelcomeEmail: false,
       })
     } else {
-      setFormData({
+      reset({
         name: "",
         email: "",
         phone: "",
@@ -65,11 +77,11 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
         sendWelcomeEmail: true,
       })
     }
-  }, [user])
+  }, [user, reset])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData as Partial<User>)
+  const onSubmit = (data: UserFormData) => {
+    onSave(data)
+    reset()
   }
 
   const isEditing = !!user
@@ -85,73 +97,83 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
               : "Completa los datos para crear un nuevo usuario en el sistema."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Nombre
               </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="col-span-3"
-                required
-              />
+              <div className="col-span-3">
+                <Input
+                  id="name"
+                  {...register("name")}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
                 Email
               </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="col-span-3"
-                required
-              />
+              <div className="col-span-3">
+                <Input
+                  id="email"
+                  type="email"
+                  {...register("email")}
+                  className={errors.email ? "border-red-500" : ""}
+                />
+                {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
                 Teléfono
               </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="col-span-3"
-                placeholder="+34 666 123 456"
-              />
+              <div className="col-span-3">
+                <Input
+                  id="phone"
+                  {...register("phone")}
+                  placeholder="+34 666 123 456"
+                  className={errors.phone ? "border-red-500" : ""}
+                />
+                {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Rol
               </Label>
-              <Select value={formData.role} onValueChange={(value: Role) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="player">Jugador</SelectItem>
-                  <SelectItem value="referee">Árbitro</SelectItem>
-                  <SelectItem value="organizer">Organizador</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="col-span-3">
+                <Select
+                  value={role}
+                  onValueChange={(value) => setValue("role", value as UserFormData['role'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="player">Jugador</SelectItem>
+                    <SelectItem value="referee">Árbitro</SelectItem>
+                    <SelectItem value="organizer">Organizador</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.role && <p className="text-sm text-red-500 mt-1">{errors.role.message}</p>}
+              </div>
             </div>
-            {formData.role === "player" && (
+            {role === "player" && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="team" className="text-right">
                   Equipo
                 </Label>
-                <Input
-                  id="team"
-                  value={formData.team}
-                  onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                  className="col-span-3"
-                  placeholder="Nombre del equipo"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="team"
+                    {...register("team")}
+                    placeholder="Nombre del equipo"
+                  />
+                </div>
               </div>
             )}
             {!isEditing && (
@@ -162,8 +184,8 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
                 <div className="col-span-3">
                   <Switch
                     id="welcome-email"
-                    checked={formData.sendWelcomeEmail}
-                    onCheckedChange={(checked) => setFormData({ ...formData, sendWelcomeEmail: checked })}
+                    checked={watch("sendWelcomeEmail")}
+                    onCheckedChange={(checked) => setValue("sendWelcomeEmail", checked)}
                   />
                   <p className="text-sm text-muted-foreground mt-1">Enviar credenciales de acceso por email</p>
                 </div>

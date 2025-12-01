@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserFormDialog } from "@/components/from/users"
+import { UserFormDialog } from "@/components/form/users"
 
 import { Role } from "@/components/menu/const"
 import { statusLabels, statusColors } from "@/app/utils/status"

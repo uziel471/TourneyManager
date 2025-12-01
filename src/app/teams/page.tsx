@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { TeamFormDialog } from "@/components/from/teams"
+import { TeamFormDialog } from "@/components/form/teams"
 import { Team, TeamCategory, TeamStatus } from "@/app/utils/teams"
 
 const mockTeams: Team[] = [

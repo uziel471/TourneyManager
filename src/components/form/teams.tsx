@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { yupResolver } from "@hookform/resolvers/yup"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,9 +16,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Upload } from "lucide-react"
+import { Upload } from 'lucide-react'
+import { teamSchema, type TeamFormData } from "@/lib/validations/team"
 
-import { Team, TeamFormData, TeamCategory, TeamStatus } from "@/app/utils/teams"
+interface Team {
+  id: string
+  name: string
+  logo?: string
+  category: string
+  coach: string
+  coachPhone: string
+  coachEmail: string
+  foundedYear: number
+  homeVenue: string
+  status: string
+}
 
 interface TeamFormDialogProps {
   open: boolean
@@ -28,92 +40,61 @@ interface TeamFormDialogProps {
 }
 
 export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDialogProps) {
-  const [formData, setFormData] = useState<TeamFormData>({
-    name: "",
-    logo: "",
-    category: TeamCategory.Primera,
-    coach: "",
-    coachPhone: "",
-    coachEmail: "",
-    foundedYear: new Date().getFullYear(),
-    homeVenue: "",
-    status: TeamStatus.Active,
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+    setValue,
+  } = useForm<TeamFormData>({
+    resolver: yupResolver(teamSchema),
+    defaultValues: {
+      name: "",
+      logo: "",
+      category: "Primera",
+      coach: "",
+      coachPhone: "",
+      coachEmail: "",
+      foundedYear: new Date().getFullYear(),
+      homeVenue: "",
+      status: "active",
+    },
   })
 
-  const [errors, setErrors] = useState<Partial<TeamFormData>>({})
+  const formData = watch()
 
   useEffect(() => {
     if (team) {
-      setFormData({
+      reset({
         name: team.name,
         logo: team.logo || "",
-        category: team.category,
+        category: team.category as TeamFormData['category'],
         coach: team.coach,
         coachPhone: team.coachPhone,
         coachEmail: team.coachEmail,
         foundedYear: team.foundedYear,
         homeVenue: team.homeVenue,
-        status: team.status,
+        status: team.status as TeamFormData['status'],
       })
     } else {
-      setFormData({
+      reset({
         name: "",
         logo: "",
-        category: TeamCategory.Primera,
+        category: "Primera",
         coach: "",
         coachPhone: "",
         coachEmail: "",
         foundedYear: new Date().getFullYear(),
         homeVenue: "",
-        status: TeamStatus.Active,
+        status: "active",
       })
     }
-    setErrors({})
-  }, [team, open])
+  }, [team, reset, open])
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<TeamFormData> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre del equipo es requerido"
-    }
-
-    if (!formData.coach.trim()) {
-      newErrors.coach = "El nombre del entrenador es requerido"
-    }
-
-    if (!formData.coachEmail.trim()) {
-      newErrors.coachEmail = "El email del entrenador es requerido"
-    } else if (!/\S+@\S+\.\S+/.test(formData.coachEmail)) {
-      newErrors.coachEmail = "El email no es válido"
-    }
-
-    if (!formData.coachPhone.trim()) {
-      newErrors.coachPhone = "El teléfono del entrenador es requerido"
-    }
-
-    if (!formData.homeVenue.trim()) {
-      newErrors.homeVenue = "La sede local es requerida"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (validateForm()) {
-      onSave(formData)
-    }
-  }
-
-  const handleInputChange = (field: keyof TeamFormData, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
-    }
+  const onSubmit = (data: TeamFormData) => {
+    onSave(data)
+    reset()
   }
 
   return (
@@ -128,7 +109,7 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Logo y Nombre */}
           <div className="flex items-start gap-4">
             <div className="flex flex-col items-center gap-2">
@@ -153,12 +134,11 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
                 <Label htmlFor="name">Nombre del Equipo *</Label>
                 <Input
                   id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  {...register("name")}
                   placeholder="Ej: Real Madrid FC"
                   className={errors.name ? "border-red-500" : ""}
                 />
-                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -166,7 +146,7 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
                   <Label htmlFor="category">Categoría *</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value: TeamCategory) => handleInputChange("category", value)}
+                    onValueChange={(value) => setValue("category", value as TeamFormData['category'])}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -178,6 +158,7 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
                       <SelectItem value="Infantil">Infantil</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category.message}</p>}
                 </div>
 
                 <div>
@@ -185,13 +166,12 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
                   <Input
                     id="foundedYear"
                     type="number"
-                    value={formData.foundedYear}
-                    onChange={(e) => handleInputChange("foundedYear", Number.parseInt(e.target.value))}
+                    {...register("foundedYear", { valueAsNumber: true })}
                     min="1800"
                     max={new Date().getFullYear()}
                     className={errors.foundedYear ? "border-red-500" : ""}
                   />
-                  {errors.foundedYear && <p className="text-sm text-red-500 mt-1">{errors.foundedYear}</p>}
+                  {errors.foundedYear && <p className="text-sm text-red-500 mt-1">{errors.foundedYear.message}</p>}
                 </div>
               </div>
             </div>
@@ -205,12 +185,11 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
               <Label htmlFor="coach">Nombre del Entrenador *</Label>
               <Input
                 id="coach"
-                value={formData.coach}
-                onChange={(e) => handleInputChange("coach", e.target.value)}
+                {...register("coach")}
                 placeholder="Ej: Carlos Ancelotti"
                 className={errors.coach ? "border-red-500" : ""}
               />
-              {errors.coach && <p className="text-sm text-red-500 mt-1">{errors.coach}</p>}
+              {errors.coach && <p className="text-sm text-red-500 mt-1">{errors.coach.message}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -219,24 +198,22 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
                 <Input
                   id="coachEmail"
                   type="email"
-                  value={formData.coachEmail}
-                  onChange={(e) => handleInputChange("coachEmail", e.target.value)}
+                  {...register("coachEmail")}
                   placeholder="entrenador@equipo.com"
                   className={errors.coachEmail ? "border-red-500" : ""}
                 />
-                {errors.coachEmail && <p className="text-sm text-red-500 mt-1">{errors.coachEmail}</p>}
+                {errors.coachEmail && <p className="text-sm text-red-500 mt-1">{errors.coachEmail.message}</p>}
               </div>
 
               <div>
                 <Label htmlFor="coachPhone">Teléfono del Entrenador *</Label>
                 <Input
                   id="coachPhone"
-                  value={formData.coachPhone}
-                  onChange={(e) => handleInputChange("coachPhone", e.target.value)}
+                  {...register("coachPhone")}
                   placeholder="+34 123 456 789"
                   className={errors.coachPhone ? "border-red-500" : ""}
                 />
-                {errors.coachPhone && <p className="text-sm text-red-500 mt-1">{errors.coachPhone}</p>}
+                {errors.coachPhone && <p className="text-sm text-red-500 mt-1">{errors.coachPhone.message}</p>}
               </div>
             </div>
           </div>
@@ -249,17 +226,19 @@ export function TeamFormDialog({ open, onOpenChange, team, onSave }: TeamFormDia
               <Label htmlFor="homeVenue">Sede Local *</Label>
               <Input
                 id="homeVenue"
-                value={formData.homeVenue}
-                onChange={(e) => handleInputChange("homeVenue", e.target.value)}
+                {...register("homeVenue")}
                 placeholder="Ej: Santiago Bernabéu"
                 className={errors.homeVenue ? "border-red-500" : ""}
               />
-              {errors.homeVenue && <p className="text-sm text-red-500 mt-1">{errors.homeVenue}</p>}
+              {errors.homeVenue && <p className="text-sm text-red-500 mt-1">{errors.homeVenue.message}</p>}
             </div>
 
             <div>
               <Label htmlFor="status">Estado del Equipo</Label>
-              <Select value={formData.status} onValueChange={(value: TeamStatus) => handleInputChange("status", value)}>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setValue("status", value as TeamFormData['status'])}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

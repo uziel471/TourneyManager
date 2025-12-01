@@ -33,7 +33,7 @@ export const menuCategories = {
   tournaments: [
     {
       title: "Torneos",
-      href: "/tournaments",
+      href: "/admin/tournaments",
       icon: Trophy,
       roles: ["admin", "organizer", "referee", "player"],
     },
