@@ -36,8 +36,9 @@ Category.init(
 	},
 	{
 		sequelize,
-		modelName: "Category",
+		modelName: "category",
 		tableName: "category",
+		timestamps: true,
 	}
 );
 

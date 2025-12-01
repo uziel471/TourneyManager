@@ -48,8 +48,9 @@ Team.init(
 	},
 	{
 		sequelize,
-		modelName: "Team",
+		modelName: "team",
 		tableName: "team",
+		timestamps: true,
 	}
 );
 

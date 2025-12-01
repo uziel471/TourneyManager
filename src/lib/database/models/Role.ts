@@ -34,7 +34,7 @@ Role.init(
 	},
 	{
 		sequelize,
-		modelName: "Role",
+		modelName: "role",
 		tableName: "role",
 	}
 );

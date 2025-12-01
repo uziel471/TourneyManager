@@ -1,15 +1,38 @@
 'use client';
 
+import { useState } from 'react';
 import { useUsers } from '@/hooks/useUsers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
+import { UserFormDialog } from '@/components/form/users';
 import { Loader2, UserPlus, Phone, Mail, Calendar } from 'lucide-react';
 import Image from 'next/image';
+import type { UserFormData } from '@/lib/validations/user';
 
 export default function UsersPage() {
-  const { users, loading, error, refetch } = useUsers();
+  const { users, loading, error, refetch, createUserFromForm } = useUsers();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleSaveUser = async (userData: UserFormData) => {
+    try {
+      console.log('Guardando usuario:', userData);
+      const result = await createUserFromForm(userData);
+      if (result.success) {
+        setIsDialogOpen(false);
+        // Mostrar mensaje de éxito (puedes implementar un toast aquí)
+        console.log('Usuario creado exitosamente:', result.data);
+      } else {
+        // Mostrar mensaje de error
+        console.error('Error al crear usuario:', result.error);
+        alert('Error al crear usuario: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert('Error inesperado al crear usuario');
+    }
+  };
 
   if (loading) {
     return (
@@ -36,7 +59,7 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold">Usuarios</h1>
           <p className="text-gray-600">Total: {users.length} usuarios</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Nuevo Usuario
         </Button>
@@ -119,12 +142,18 @@ export default function UsersPage() {
           <UserPlus className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No hay usuarios</h3>
           <p className="text-gray-500">Comienza agregando tu primer usuario</p>
-          <Button className="mt-4">
+          <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Agregar Usuario
           </Button>
         </div>
       )}
+
+      <UserFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleSaveUser}
+      />
     </div>
   );
 }

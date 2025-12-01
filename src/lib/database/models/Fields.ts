@@ -28,8 +28,9 @@ Fields.init(
 	},
 	{
 		sequelize,
-		modelName: "Fields",
+		modelName: "fields",
 		tableName: "fields",
+		timestamps: true,
 	}
 );
 

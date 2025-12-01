@@ -90,8 +90,9 @@ Person.init(
 	},
 	{
 		sequelize,
-		modelName: "Person",
+		modelName: "person",
 		tableName: "person",
+		timestamps: true,
 	}
 );
 

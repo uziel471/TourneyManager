@@ -29,7 +29,7 @@ TeamsHasPersons.init(
 	},
 	{
 		sequelize,
-		modelName: "TeamsHasPersons",
+		modelName: "teams_has_persons",
 		tableName: "teams_has_persons",
 		timestamps: false,
 	}

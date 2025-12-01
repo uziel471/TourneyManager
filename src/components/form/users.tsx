@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import { Button } from "@/components/ui/button"
@@ -15,17 +15,27 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { userSchema, type UserFormData } from "@/lib/validations/user"
+
+interface Role {
+  id: string
+  name: string
+}
+
+interface Category {
+  id: string
+  name: string
+}
 
 interface User {
   id: string
   name: string
+  last_name: string
   email: string
-  phone?: string
-  role: string
-  status: string
-  team?: string
+  cellphone: string
+  role_id: string
+  category_id: string
+  birth_date: string
 }
 
 interface UserFormDialogProps {
@@ -36,6 +46,10 @@ interface UserFormDialogProps {
 }
 
 export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDialogProps) {
+  const [roles, setRoles] = useState<Role[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+
   const {
     register,
     handleSubmit,
@@ -47,34 +61,73 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
     resolver: yupResolver(userSchema),
     defaultValues: {
       name: "",
+      last_name: "",
       email: "",
-      phone: "",
-      role: "player",
-      team: "",
-      sendWelcomeEmail: true,
+      cellphone: "",
+      role_id: "",
+      category_id: "",
+      birth_date: "",
+      active: true,
     },
   })
 
-  const role = watch("role")
+  const role_id = watch("role_id")
+  const category_id = watch("category_id")
+
+  // Cargar roles y categorías
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [rolesResponse, categoriesResponse] = await Promise.all([
+          fetch("/api/roles"),
+          fetch("/api/categories")
+        ])
+
+        const rolesData = await rolesResponse.json()
+        const categoriesData = await categoriesResponse.json()
+
+        if (rolesData.success) {
+          setRoles(rolesData.data)
+        }
+
+        if (categoriesData.success) {
+          setCategories(categoriesData.data)
+        }
+      } catch (error) {
+        console.error("Error loading data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (open) {
+      fetchData()
+    }
+  }, [open])
 
   useEffect(() => {
     if (user) {
       reset({
         name: user.name,
-        email: user.email,
-        phone: user.phone || "",
-        role: user.role as UserFormData['role'],
-        team: user.team || "",
-        sendWelcomeEmail: false,
+        last_name: user.last_name,
+        email: user.email || "",
+        cellphone: user.cellphone,
+        role_id: user.role_id,
+        category_id: user.category_id,
+        birth_date: user.birth_date,
+        active: true,
       })
     } else {
       reset({
         name: "",
+        last_name: "",
         email: "",
-        phone: "",
-        role: "player",
-        team: "",
-        sendWelcomeEmail: true,
+        cellphone: "",
+        role_id: "",
+        category_id: "",
+        birth_date: "",
+        active: true,
       })
     }
   }, [user, reset])
@@ -112,6 +165,21 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
                 {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
               </div>
             </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="last_name" className="text-right">
+                Apellido
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="last_name"
+                  {...register("last_name")}
+                  className={errors.last_name ? "border-red-500" : ""}
+                />
+                {errors.last_name && <p className="text-sm text-red-500 mt-1">{errors.last_name.message}</p>}
+              </div>
+            </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
                 Email
@@ -126,77 +194,92 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: UserFormDia
                 {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
               </div>
             </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
+              <Label htmlFor="cellphone" className="text-right">
                 Teléfono
               </Label>
               <div className="col-span-3">
                 <Input
-                  id="phone"
-                  {...register("phone")}
+                  id="cellphone"
+                  {...register("cellphone")}
                   placeholder="+34 666 123 456"
-                  className={errors.phone ? "border-red-500" : ""}
+                  className={errors.cellphone ? "border-red-500" : ""}
                 />
-                {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>}
+                {errors.cellphone && <p className="text-sm text-red-500 mt-1">{errors.cellphone.message}</p>}
               </div>
             </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
+              <Label htmlFor="birth_date" className="text-right">
+                Fecha Nacimiento
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="birth_date"
+                  type="date"
+                  {...register("birth_date")}
+                  className={errors.birth_date ? "border-red-500" : ""}
+                />
+                {errors.birth_date && <p className="text-sm text-red-500 mt-1">{errors.birth_date.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role_id" className="text-right">
                 Rol
               </Label>
               <div className="col-span-3">
                 <Select
-                  value={role}
-                  onValueChange={(value) => setValue("role", value as UserFormData['role'])}
+                  value={role_id}
+                  onValueChange={(value) => setValue("role_id", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Seleccionar rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="player">Jugador</SelectItem>
-                    <SelectItem value="referee">Árbitro</SelectItem>
-                    <SelectItem value="organizer">Organizador</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {errors.role && <p className="text-sm text-red-500 mt-1">{errors.role.message}</p>}
+                {errors.role_id && <p className="text-sm text-red-500 mt-1">{errors.role_id.message}</p>}
               </div>
             </div>
-            {role === "player" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="team" className="text-right">
-                  Equipo
-                </Label>
-                <div className="col-span-3">
-                  <Input
-                    id="team"
-                    {...register("team")}
-                    placeholder="Nombre del equipo"
-                  />
-                </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category_id" className="text-right">
+                Categoría
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  value={category_id}
+                  onValueChange={(value) => setValue("category_id", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.category_id && <p className="text-sm text-red-500 mt-1">{errors.category_id.message}</p>}
               </div>
-            )}
-            {!isEditing && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="welcome-email" className="text-right">
-                  Email de Bienvenida
-                </Label>
-                <div className="col-span-3">
-                  <Switch
-                    id="welcome-email"
-                    checked={watch("sendWelcomeEmail")}
-                    onCheckedChange={(checked) => setValue("sendWelcomeEmail", checked)}
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Enviar credenciales de acceso por email</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit">{isEditing ? "Guardar Cambios" : "Crear Usuario"}</Button>
+            <Button type="submit" disabled={loading}>
+              {isEditing ? "Guardar Cambios" : "Crear Usuario"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

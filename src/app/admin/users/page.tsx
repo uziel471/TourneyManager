@@ -111,7 +111,6 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User>()
-
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,7 +143,7 @@ export default function UsersPage() {
     )
   }
 
-  const handleSaveUser = (userData: Partial<User>) => {
+  const handleSaveUser = async (userData: Partial<User>) => {
     if (editingUser) {
       setUsers(users.map((user) => (user.id === editingUser.id ? { ...user, ...userData } : user)))
     } else {
@@ -160,6 +159,16 @@ export default function UsersPage() {
       }
       setUsers([...users, newUser])
     }
+    console.log('userData', userData);
+    const response = await fetch("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
     setIsDialogOpen(false)
   }
 
@@ -375,7 +384,7 @@ export default function UsersPage() {
       </Card>
 
       {/* User Form Dialog */}
-      <UserFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} user={editingUser} onSave={handleSaveUser} />
+      <UserFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} user={editingUser as any} onSave={handleSaveUser} />
     </div>
   )
 }
