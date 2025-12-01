@@ -1,5 +1,6 @@
 import { DataTypes, Model } from "sequelize";
-import sequelize from "../lib/database/config";
+import sequelize from "../config";
+import type { ModelsType } from "./index";
 
 class Person extends Model {
 	public id!: string;
@@ -14,6 +15,24 @@ class Person extends Model {
 	public category_id!: string;
 	public readonly createdAt!: Date;
 	public readonly updatedAt!: Date;
+
+	static associate(models: ModelsType) {
+		Person.belongsTo(models.Role, { foreignKey: "role_id", as: "role" });
+
+		Person.belongsTo(models.Category, {
+			foreignKey: "category_id",
+			as: "category",
+		});
+
+		Person.hasMany(models.Team, { foreignKey: "owner_id", as: "ownedTeams" });
+
+		Person.belongsToMany(models.Team, {
+			through: models.TeamsHasPersons,
+			foreignKey: "person_id",
+			otherKey: "team_id",
+			as: "teams",
+		});
+	}
 }
 
 Person.init(

@@ -1,15 +1,21 @@
 import { DataTypes, Model } from "sequelize";
-import sequelize from "../lib/database/config";
+import sequelize from "../config";
+import type { ModelsType } from "./index";
 
-class Fields extends Model {
+class Role extends Model {
 	public id!: string;
 	public name!: string;
 	public active!: boolean;
 	public readonly createdAt!: Date;
 	public readonly updatedAt!: Date;
+
+	static associate(models: ModelsType) {
+		// Role has many Persons
+		Role.hasMany(models.Person, { foreignKey: "role_id", as: "persons" });
+	}
 }
 
-Fields.init(
+Role.init(
 	{
 		id: {
 			type: DataTypes.UUID,
@@ -28,9 +34,9 @@ Fields.init(
 	},
 	{
 		sequelize,
-		modelName: "Fields",
-		tableName: "fields",
+		modelName: "Role",
+		tableName: "role",
 	}
 );
 
-export default Fields;
+export default Role;

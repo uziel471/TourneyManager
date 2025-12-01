@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
-import sequelize from "../lib/database/config";
+import sequelize from "../config";
 
-class Fields extends Model {
+class Role extends Model {
 	public id!: string;
 	public name!: string;
 	public active!: boolean;
@@ -9,7 +9,7 @@ class Fields extends Model {
 	public readonly updatedAt!: Date;
 }
 
-Fields.init(
+Role.init(
 	{
 		id: {
 			type: DataTypes.UUID,
@@ -28,9 +28,9 @@ Fields.init(
 	},
 	{
 		sequelize,
-		modelName: "Fields",
-		tableName: "fields",
+		modelName: "Role",
+		tableName: "role",
 	}
 );
 
-export default Fields;
+export default Role;

@@ -39,8 +39,8 @@ import { roleLabels } from "@/app/utils/roles"
 interface User {
   id: string
   name: string
-  email: string
-  phone?: string
+  email?: string
+  phone: string
   role: Role
   status: "active" | "inactive" | "suspended"
   avatar?: string
@@ -74,6 +74,7 @@ const mockUsers: User[] = [
     id: "3",
     name: "Juan Pérez",
     email: "juan@example.com",
+    phone: "+34 666 345 678",
     role: Role.Referee,
     status: "active",
     createdAt: "2024-02-15",
@@ -84,6 +85,7 @@ const mockUsers: User[] = [
     name: "Ana Martín",
     email: "ana@example.com",
     role: Role.Player,
+    phone: "+34 666 901 234",
     status: "active",
     team: "FC Barcelona",
     createdAt: "2024-03-01",
@@ -94,6 +96,7 @@ const mockUsers: User[] = [
     name: "Luis Torres",
     email: "luis@example.com",
     role: Role.Player,
+    phone: "+34 666 567 890",
     status: "suspended",
     team: "Real Madrid",
     createdAt: "2024-02-20",
@@ -112,7 +115,7 @@ export default function UsersPage() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === "all" || user.role === roleFilter
     const matchesStatus = statusFilter === "all" || user.status === statusFilter
 
@@ -149,7 +152,7 @@ export default function UsersPage() {
         id: Date.now().toString(),
         name: userData.name || "",
         email: userData.email || "",
-        phone: userData.phone,
+        phone: userData.phone || "",
         role: userData.role || Role.Player,
         status: "active",
         createdAt: new Date().toISOString().split("T")[0],

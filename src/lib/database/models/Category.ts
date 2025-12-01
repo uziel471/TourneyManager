@@ -1,15 +1,23 @@
 import { DataTypes, Model } from "sequelize";
-import sequelize from "../lib/database/config";
+import sequelize from "../config";
+import type { ModelsType } from "./index";
 
-class Fields extends Model {
+class Category extends Model {
 	public id!: string;
 	public name!: string;
 	public active!: boolean;
 	public readonly createdAt!: Date;
 	public readonly updatedAt!: Date;
+
+	static associate(models: ModelsType) {
+		Category.hasMany(models.Person, {
+			foreignKey: "category_id",
+			as: "persons",
+		});
+	}
 }
 
-Fields.init(
+Category.init(
 	{
 		id: {
 			type: DataTypes.UUID,
@@ -28,9 +36,9 @@ Fields.init(
 	},
 	{
 		sequelize,
-		modelName: "Fields",
-		tableName: "fields",
+		modelName: "Category",
+		tableName: "category",
 	}
 );
 
-export default Fields;
+export default Category;
