@@ -7,7 +7,8 @@
 		"build": "next build --turbopack",
 		"start": "next start",
 		"lint": "eslint",
-		"test-db": "ts-node --project tsconfig.node.json src/test-db.ts"
+		"test-db": "ts-node --project tsconfig.node.json src/test-db.ts",
+		"init-db": "ts-node --project tsconfig.node.json src/scripts/init-database.ts"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
@@ -23,7 +24,6 @@
 		"@radix-ui/react-switch": "^1.2.6",
 		"@radix-ui/react-tabs": "^1.1.13",
 		"@supabase/ssr": "^0.7.0",
-		"@types/sequelize": "^6.12.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"dotenv": "^17.2.2",
