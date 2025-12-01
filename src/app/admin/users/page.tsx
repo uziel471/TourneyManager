@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   Users,
   Plus,
@@ -14,6 +14,7 @@ import {
   Calendar,
   UserCheck,
   UserX,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,94 +33,31 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UserFormDialog } from "@/components/form/users"
 
-import { Role } from "@/components/menu/const"
-import { statusLabels, statusColors } from "@/app/utils/status"
-import { roleLabels } from "@/app/utils/roles"
-
-interface User {
-  id: string
-  name: string
-  email?: string
-  phone: string
-  role: Role
-  status: "active" | "inactive" | "suspended"
-  avatar?: string
-  createdAt: string
-  lastLogin?: string
-  team?: string
-}
-
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Carlos Rodríguez",
-    email: "carlos@example.com",
-    phone: "+34 666 123 456",
-    role: Role.Admin,
-    status: "active",
-    createdAt: "2024-01-15",
-    lastLogin: "2024-03-10",
-  },
-  {
-    id: "2",
-    name: "María González",
-    email: "maria@example.com",
-    phone: "+34 666 789 012",
-    role: Role.Organizer,
-    status: "active",
-    createdAt: "2024-02-01",
-    lastLogin: "2024-03-09",
-  },
-  {
-    id: "3",
-    name: "Juan Pérez",
-    email: "juan@example.com",
-    phone: "+34 666 345 678",
-    role: Role.Referee,
-    status: "active",
-    createdAt: "2024-02-15",
-    lastLogin: "2024-03-08",
-  },
-  {
-    id: "4",
-    name: "Ana Martín",
-    email: "ana@example.com",
-    role: Role.Player,
-    phone: "+34 666 901 234",
-    status: "active",
-    team: "FC Barcelona",
-    createdAt: "2024-03-01",
-    lastLogin: "2024-03-10",
-  },
-  {
-    id: "5",
-    name: "Luis Torres",
-    email: "luis@example.com",
-    role: Role.Player,
-    phone: "+34 666 567 890",
-    status: "suspended",
-    team: "Real Madrid",
-    createdAt: "2024-02-20",
-    lastLogin: "2024-03-05",
-  },
-]
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, type User } from "@/hooks/useUsers"
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers)
+  const { data: users = [], isLoading, error } = useUsers()
+  const createUserMutation = useCreateUser()
+  const updateUserMutation = useUpdateUser()
+  const deleteUserMutation = useDeleteUser()
+
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User>()
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === "all" || user.role === roleFilter
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const fullName = `${user.name} ${user.last_name}`.toLowerCase()
+      const matchesSearch =
+        fullName.includes(searchTerm.toLowerCase()) ||
+        user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesRole = roleFilter === "all" || user.role.name === roleFilter
+      const matchesStatus = statusFilter === "all" || (user.active ? "active" : "inactive") === statusFilter
 
-    return matchesSearch && matchesRole && matchesStatus
-  })
+      return matchesSearch && matchesRole && matchesStatus
+    })
+  }, [users, searchTerm, roleFilter, statusFilter])
 
   const handleCreateUser = () => {
     setEditingUser(undefined)
@@ -131,52 +69,88 @@ export default function UsersPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId))
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await deleteUserMutation.mutateAsync(userId)
+    } catch (error) {
+      console.error('Error deleting user:', error)
+    }
   }
 
-  const handleToggleStatus = (userId: string) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, status: user.status === "active" ? "suspended" : ("active" as const) } : user,
-      ),
+  const handleToggleStatus = async (user: User) => {
+    try {
+      await updateUserMutation.mutateAsync({
+        id: user.id,
+        name: user.name,
+        last_name: user.last_name,
+        email: user.email,
+        cellphone: user.cellphone,
+        role_id: user.role.id,
+        birth_date: user.birth_date,
+        category_id: user.category.id,
+        active: !user.active,
+      })
+    } catch (error) {
+      console.error('Error updating user status:', error)
+    }
+  }
+
+  const handleSaveUser = async (userData: {
+    name: string;
+    last_name: string;
+    email?: string;
+    cellphone: string;
+    role_id: string;
+    birth_date: string;
+    category_id: string;
+    active?: boolean;
+  }) => {
+    try {
+      if (editingUser) {
+        await updateUserMutation.mutateAsync({
+          id: editingUser.id,
+          ...userData,
+        })
+      } else {
+        await createUserMutation.mutateAsync(userData)
+      }
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error('Error saving user:', error)
+    }
+  }
+
+  const stats = useMemo(() => ({
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role.name === "Admin").length,
+    players: users.filter((u) => u.role.name === "Player").length,
+  }), [users])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Cargando usuarios...</span>
+        </div>
+      </div>
     )
   }
 
-  const handleSaveUser = async (userData: Partial<User>) => {
-    if (editingUser) {
-      setUsers(users.map((user) => (user.id === editingUser.id ? { ...user, ...userData } : user)))
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: userData.name || "",
-        email: userData.email || "",
-        phone: userData.phone || "",
-        role: userData.role || Role.Player,
-        status: "active",
-        createdAt: new Date().toISOString().split("T")[0],
-        team: userData.team,
-      }
-      setUsers([...users, newUser])
-    }
-    console.log('userData', userData);
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const data = await response.json();
-    setIsDialogOpen(false)
-  }
-
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.status === "active").length,
-    admins: users.filter((u) => u.role === Role.Admin).length,
-    players: users.filter((u) => u.role === Role.Player).length,
+  if (error) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-600 mb-2">Error al cargar usuarios</p>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -256,10 +230,10 @@ export default function UsersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los roles</SelectItem>
-                <SelectItem value={Role.Admin}>Administrador</SelectItem>
-                <SelectItem value={Role.Organizer}>Organizador</SelectItem>
-                <SelectItem value={Role.Referee}>Árbitro</SelectItem>
-                <SelectItem value={Role.Player}>Jugador</SelectItem>
+                <SelectItem value="Admin">Administrador</SelectItem>
+                <SelectItem value="Organizer">Organizador</SelectItem>
+                <SelectItem value="Referee">Árbitro</SelectItem>
+                <SelectItem value="Player">Jugador</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -270,7 +244,6 @@ export default function UsersPage() {
                 <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="active">Activo</SelectItem>
                 <SelectItem value="inactive">Inactivo</SelectItem>
-                <SelectItem value="suspended">Suspendido</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -290,8 +263,8 @@ export default function UsersPage() {
                 <TableHead>Usuario</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Equipo</TableHead>
-                <TableHead>Último Acceso</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead>Fecha Registro</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -301,7 +274,7 @@ export default function UsersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                        <AvatarImage src={user.photo || "/placeholder.svg"} alt={user.name} />
                         <AvatarFallback>
                           {user.name
                             .split(" ")
@@ -311,36 +284,34 @@ export default function UsersPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{user.name}</div>
+                        <div className="font-medium">{user.name} {user.last_name}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-1">
                           <Mail className="h-3 w-3" />
-                          {user.email}
+                          {user.email || 'Sin email'}
                         </div>
-                        {user.phone && (
+                        {user.cellphone && (
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {user.phone}
+                            {user.cellphone}
                           </div>
                         )}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{roleLabels[user.role]}</Badge>
+                    <Badge variant="outline">{user.role.name}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={statusColors[user.status]}>{statusLabels[user.status]}</Badge>
+                    <Badge className={user.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                      {user.active ? "Activo" : "Inactivo"}
+                    </Badge>
                   </TableCell>
-                  <TableCell>{user.team || "-"}</TableCell>
+                  <TableCell>{user.category?.name || "-"}</TableCell>
                   <TableCell>
-                    {user.lastLogin ? (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(user.lastLogin).toLocaleDateString()}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Nunca</span>
-                    )}
+                    <div className="flex items-center gap-1 text-sm">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(user.updatedAt).toLocaleDateString()}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -355,11 +326,11 @@ export default function UsersPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(user.id)}>
-                          {user.status === "active" ? (
+                        <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                          {user.active ? (
                             <>
                               <UserX className="mr-2 h-4 w-4" />
-                              Suspender
+                              Desactivar
                             </>
                           ) : (
                             <>
@@ -382,9 +353,21 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* User Form Dialog */}
-      <UserFormDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} user={editingUser as any} onSave={handleSaveUser} />
+      <UserFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        user={editingUser ? {
+          id: editingUser.id,
+          name: editingUser.name,
+          last_name: editingUser.last_name,
+          email: editingUser.email || '',
+          cellphone: editingUser.cellphone,
+          role_id: editingUser.role_id,
+          category_id: editingUser.category_id,
+          birth_date: editingUser.birth_date
+        } : undefined}
+        onSave={handleSaveUser}
+      />
     </div>
   )
 }

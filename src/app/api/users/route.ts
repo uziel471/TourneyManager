@@ -17,6 +17,7 @@ export const GET = withDatabase(async (request: NextRequest) => {
 			{ model: Role, as: "role" },
 			{ model: Category, as: "category" },
 		],
+		searchFields: ["name", "last_name", "email", "cellphone"],
 	};
 	return handlePaginatedGet(request, config);
 });
@@ -100,5 +101,29 @@ export const PUT = withDatabase(async (request: NextRequest) => {
 		);
 	} catch (error) {
 		return handleApiError(error, "Error al actualizar el usuario");
+	}
+});
+
+export const DELETE = withDatabase(async (request: NextRequest) => {
+	try {
+		const url = new URL(request.url);
+		const id = url.pathname.split("/").pop();
+
+		if (!id) {
+			return ApiResponseHandler.badRequest("El ID del usuario es requerido");
+		}
+
+		const existingUser = await Person.findByPk(id);
+		if (!existingUser) {
+			return ApiResponseHandler.notFound("Usuario no encontrado");
+		}
+
+		await existingUser.update({
+			active: false,
+		});
+
+		return ApiResponseHandler.success(null, "Usuario eliminado exitosamente");
+	} catch (error) {
+		return handleApiError(error, "Error al eliminar el usuario");
 	}
 });
